@@ -12,8 +12,15 @@
 <!-- 控制面板 -->
 <div class="sticky-panel">
   <div class="panel-row">
-    <textarea id="textInput" placeholder="在此输入文案，支持多行...">今天也要元气满满
-加油！冲冲冲</textarea>
+    <textarea id="textInput" placeholder="在此输入文案，支持自动精准折行分页...">今天也要元气满满，加油！冲冲冲。
+这是一段较长的测试文本，如果在框内自动折行或者手动换行超过设定的行数，就会自动分页生成第二张图片。
+这里是超过8行后的内容，会自动归入第2张卡片！</textarea>
+
+    <div class="control-group">
+      <label>每页最高行数</label>
+      <input type="number" id="linesPerPage" min="1" max="30" value="8" style="width:50px;">
+      <span style="color:#888;font-size:12px;">行/页</span>
+    </div>
 
     <div class="control-group">
       <label>字号</label>
@@ -32,8 +39,8 @@
     </div>
     <div class="control-group">
       <button class="btn" id="boldBtn">B 加粗</button>
-      <button class="btn active" data-align="center">居中</button>
-      <button class="btn" data-align="left">左对齐</button>
+      <button class="btn active" data-align="left">左对齐</button>
+      <button class="btn" data-align="center">居中</button>
       <button class="btn" data-align="right">右对齐</button>
     </div>
   </div>
@@ -59,6 +66,11 @@
       <button class="btn" id="saveBgBtn">收藏当前背景</button>
     </div>
 
+    <div class="control-group" id="savedBgSection" style="display:none;">
+      <label>收藏背景</label>
+      <div class="bg-swatches" id="savedBgList"></div>
+    </div>
+
     <div class="control-group">
       <label>背景图</label>
       <input type="file" id="bgImageInput" accept="image/*" style="font-size:12px;width:140px;">
@@ -73,9 +85,15 @@
   <div class="panel-row">
     <div class="control-group">
       <label>视图</label>
-      <button class="btn active" data-view="safe">安全线</button>
-      <button class="btn" data-view="phone">手机外观</button>
+      <button class="btn" data-view="safe">安全线</button>
+      <button class="btn active" data-view="phone">手机外观</button>
       <button class="btn" data-view="pure">纯正文</button>
+    </div>
+
+    <div class="control-group">
+      <label>导出清晰度</label>
+      <input type="range" id="exportScale" min="3" max="6" value="3" step="1" style="width:70px;">
+      <span id="exportScaleVal">3</span>× 高清
     </div>
 
     <div class="control-group">
@@ -103,18 +121,9 @@
     </div>
   </div>
 
-  <div class="saved-section" id="savedBgSection" style="display:none;">
-    <h4>已收藏背景（IndexedDB 存储，支持大图，刷新不丢失 · 悬停显示删除）</h4>
-    <div class="bg-swatches" id="savedBgList"></div>
-  </div>
-
   <div class="effects-drawer" id="effectsDrawer">
     <div class="effect-chips" id="effectChips"></div>
   </div>
-</div>
-
-<div class="status-bar">
-  文字可拖拽定位 + 右下角圆点调整宽高 · 所有预览同步 · 导出 3× 高清 PNG · 本地运行无上传 · 字体与背景使用 IndexedDB 持久化（支持 20MB+ 字体）
 </div>
 
 <!-- 预览网格 -->

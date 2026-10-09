@@ -190,28 +190,115 @@ function updateEffectCount() {
   $('effectCount').textContent = `${state.enabledEffects.size} / ${EFFECTS.length}`;
 }
 
+/**
+ * 核心优化：利用 DOM 离屏真实渲染与 Range API 捕获准确断行
+ * 彻底解决调节大字号、排版变空乱的问题，确保字数满满紧凑填满才排下一行
+ */
+function getPagesText() {
+  if (!state.text) return [''];
+
+  const containerWidth = state.textBox.w || 210;
+  const offscreen = document.createElement('div');
+  offscreen.style.cssText = `
+    position: absolute;
+    visibility: hidden;
+    left: -9999px;
+    top: -9999px;
+    width: ${containerWidth}px;
+    font-size: ${state.fontSize}px;
+    line-height: ${state.lineHeight};
+    letter-spacing: ${state.letterSpacing}px;
+    font-weight: ${state.bold ? '700' : '400'};
+    font-family: ${state.customFont || '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'};
+    word-break: break-word;
+    white-space: pre-wrap;
+    padding: 4px;
+    box-sizing: border-box;
+  `;
+  document.body.appendChild(offscreen);
+
+  const paragraphs = state.text.split('\n');
+  const allLines = [];
+
+  paragraphs.forEach(para => {
+    if (para === '') {
+      allLines.push('');
+      return;
+    }
+
+    const paraSpan = document.createElement('span');
+    paraSpan.textContent = para;
+    offscreen.appendChild(paraSpan);
+
+    const range = document.createRange();
+    let currentLineText = '';
+    let lastY = null;
+
+    for (let i = 0; i < para.length; i++) {
+      range.setStart(paraSpan.firstChild, i);
+      range.setEnd(paraSpan.firstChild, i + 1);
+      const rect = range.getBoundingClientRect();
+
+      if (lastY === null) {
+        lastY = rect.top;
+      }
+
+      if (Math.abs(rect.top - lastY) > 2 && currentLineText.length > 0) {
+        allLines.push(currentLineText);
+        currentLineText = para[i];
+        lastY = rect.top;
+      } else {
+        currentLineText += para[i];
+      }
+    }
+    if (currentLineText) {
+      allLines.push(currentLineText);
+    }
+
+    offscreen.removeChild(paraSpan);
+  });
+
+  document.body.removeChild(offscreen);
+
+  const maxLines = state.linesPerPage || 8;
+  const pages = [];
+  for (let i = 0; i < allLines.length; i += maxLines) {
+    pages.push(allLines.slice(i, i + maxLines).join('\n'));
+  }
+
+  return pages.length > 0 ? pages : [''];
+}
+
 function renderAllCards() {
   previewGrid.innerHTML = '';
-  EFFECTS.filter(fx => state.enabledEffects.has(fx.id)).forEach(fx => {
-    const card = createCard(fx);
-    previewGrid.appendChild(card);
+  const pagesText = getPagesText();
+  const enabledFx = EFFECTS.filter(fx => state.enabledEffects.has(fx.id));
+
+  enabledFx.forEach(fx => {
+    pagesText.forEach((pageContent, pageIdx) => {
+      const card = createCard(fx, pageContent, pageIdx + 1, pagesText.length);
+      previewGrid.appendChild(card);
+    });
   });
   syncAllTextBoxes();
 }
 
-function createCard(fx) {
+function createCard(fx, pageContent, pageNum, totalPages) {
   const card = document.createElement('div');
   card.className = 'card';
   card.dataset.id = fx.id;
+  card.dataset.page = pageNum;
+
+  const pageBadge = totalPages > 1 ? ` (第 ${pageNum}/${totalPages} 页)` : '';
 
   card.innerHTML = `
     <div class="card-header">
-      <span class="name">${fx.name}</span>
+      <span class="name">${fx.name}${pageBadge}</span>
       <div class="card-actions">
         <button title="删除此效果" class="btn-remove">✕</button>
       </div>
     </div>
-    <div class="canvas-wrap view-${state.viewMode}" id="canvas-${fx.id}">
+    <div class="canvas-wrap view-${state.viewMode}" id="canvas-${fx.id}-p${pageNum}">
       <div class="canvas-bg"></div>
       <div class="canvas-content">
         <div class="text-box" data-fx="${fx.id}">
@@ -235,13 +322,13 @@ function createCard(fx) {
   `;
 
   card.querySelector('.btn-remove').onclick = () => removeEffect(fx.id);
-  card.querySelector('.btn-export-single').onclick = () => exportSingle(fx.id);
+  card.querySelector('.btn-export-single').onclick = () => exportSinglePage(fx.id, pageNum);
 
   const bgEl = card.querySelector('.canvas-bg');
   applyBackground(bgEl);
 
   const textEl = card.querySelector('.fx-text');
-  updateTextStyle(textEl, fx);
+  updateTextStyle(textEl, fx, pageContent);
 
   const textBox = card.querySelector('.text-box');
   setupDragResize(textBox);
@@ -262,8 +349,8 @@ function applyBackground(bgEl) {
   }
 }
 
-function updateTextStyle(textEl, fx) {
-  textEl.textContent = state.text;
+function updateTextStyle(textEl, fx, content) {
+  textEl.textContent = content !== undefined ? content : state.text;
   textEl.style.fontSize = state.fontSize + 'px';
   textEl.style.lineHeight = state.lineHeight;
   const ls = state.letterSpacing + (fx.extraLetter || 0);
@@ -281,15 +368,18 @@ function updateTextStyle(textEl, fx) {
 function bindEvents() {
   textInput.addEventListener('input', () => {
     state.text = textInput.value;
-    document.querySelectorAll('.fx-text').forEach(el => {
-      el.textContent = state.text;
-    });
+    renderAllCards();
+  });
+
+  $('linesPerPage').addEventListener('input', e => {
+    state.linesPerPage = Math.max(1, +e.target.value || 8);
+    renderAllCards();
   });
 
   $('fontSize').oninput = e => {
     state.fontSize = +e.target.value;
     $('fontSizeVal').textContent = state.fontSize;
-    refreshAllTextStyles();
+    renderAllCards();
   };
   $('lineHeight').oninput = e => {
     state.lineHeight = +e.target.value;
@@ -299,7 +389,11 @@ function bindEvents() {
   $('letterSpacing').oninput = e => {
     state.letterSpacing = +e.target.value;
     $('letterSpacingVal').textContent = state.letterSpacing;
-    refreshAllTextStyles();
+    renderAllCards();
+  };
+  $('exportScale').oninput = e => {
+    state.exportScale = +e.target.value;
+    $('exportScaleVal').textContent = state.exportScale;
   };
   $('boldBtn').onclick = () => {
     state.bold = !state.bold;
@@ -379,16 +473,19 @@ function bindEvents() {
 }
 
 function refreshAllTextStyles() {
-  document.querySelectorAll('.text-box').forEach(box => {
-    const fxId = +box.dataset.fx;
+  const pagesText = getPagesText();
+  document.querySelectorAll('.card').forEach(card => {
+    const pageNum = +card.dataset.page || 1;
+    const pageContent = pagesText[pageNum - 1] || '';
+    const fxId = +card.dataset.id;
     const fx = EFFECTS.find(f => f.id === fxId);
-    const textEl = box.querySelector('.fx-text');
-    updateTextStyle(textEl, fx);
+    const textEl = card.querySelector('.fx-text');
+    if (textEl) updateTextStyle(textEl, fx, pageContent);
   });
 }
 
 async function updateStorageInfo() {
-  if (navigator.storage && navigator.storageestimate) {
+  if (navigator.storage && navigator.storage.estimate) {
     try {
       const est = await navigator.storage.estimate();
       const used = (est.usage / 1024 / 1024).toFixed(1);
@@ -406,8 +503,8 @@ function removeEffect(id) {
   updateEffectCount();
 }
 
-async function exportSingle(id) {
-  const canvasWrap = document.getElementById('canvas-' + id);
+async function exportSinglePage(id, pageNum) {
+  const canvasWrap = document.getElementById(`canvas-${id}-p${pageNum}`);
   if (!canvasWrap) return;
 
   const prevClass = canvasWrap.className;
@@ -415,13 +512,13 @@ async function exportSingle(id) {
 
   try {
     const canvas = await html2canvas(canvasWrap, {
-      scale: 3,
+      scale: state.exportScale,
       useCORS: true,
       backgroundColor: null,
       logging: false,
     });
     const link = document.createElement('a');
-    link.download = `抖音质感特效-样式${id}.png`;
+    link.download = `抖音特效-样式${id}-P${pageNum}.png`;
     link.href = canvas.toDataURL('image/png');
     link.click();
   } catch (err) {
@@ -432,12 +529,17 @@ async function exportSingle(id) {
 }
 
 async function exportAll() {
-  const ids = [...state.enabledEffects];
-  for (let i = 0; i < ids.length; i++) {
-    await exportSingle(ids[i]);
-    await new Promise(r => setTimeout(r, 300));
+  const cards = document.querySelectorAll('.card');
+  const delayMs = state.exportScale > 4 ? 400 : 200;
+
+  for (let i = 0; i < cards.length; i++) {
+    const card = cards[i];
+    const id = +card.dataset.id;
+    const pageNum = +card.dataset.page || 1;
+    await exportSinglePage(id, pageNum);
+    await new Promise(r => setTimeout(r, delayMs));
   }
-  alert(`已导出 ${ids.length} 张高清 PNG`);
+  alert(`已按 ${state.exportScale}× 清晰度导出全部共 ${cards.length} 张图片`);
 }
 
 function savePreset() {
@@ -514,5 +616,5 @@ function applyPreset(p) {
   updateEffectCount();
 }
 
-// 页面加载完成后自动启动
+// 页面加载完成后启动
 document.addEventListener('DOMContentLoaded', init);
