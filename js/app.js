@@ -513,10 +513,30 @@ function updateTextStyle(textEl, fx, content) {
 }
 
 function bindEvents() {
+  let textRenderTimer = null;
+
+  const flushTextRender = () => {
+    if (textRenderTimer !== null) {
+      clearTimeout(textRenderTimer);
+      textRenderTimer = null;
+      renderAllCards();
+    }
+  };
+
   textInput.addEventListener('input', () => {
     state.text = textInput.innerHTML;
-    renderAllCards();
+
+    if (textRenderTimer !== null) {
+      clearTimeout(textRenderTimer);
+    }
+
+    textRenderTimer = setTimeout(() => {
+      textRenderTimer = null;
+      renderAllCards();
+    }, 140);
   });
+
+  textInput.addEventListener('blur', flushTextRender);
 
   $('fontSize').oninput = e => {
     state.fontSize = +e.target.value;
