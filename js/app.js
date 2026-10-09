@@ -11,7 +11,6 @@ async function init() {
     await restoreSavedBgs();
   } catch (err) {
     console.error('IndexedDB 初始化失败', err);
-    alert('本地数据库初始化失败，大文件持久化功能可能不可用');
   }
 
   if (state.text) {
@@ -28,6 +27,7 @@ async function init() {
   updateStorageInfo();
 }
 
+// 富文本编辑操作指令
 function execCmd(command, value = null) {
   document.execCommand(command, false, value);
   textInput.focus();
@@ -35,16 +35,60 @@ function execCmd(command, value = null) {
   renderAllCards();
 }
 
+/**
+ * 智能高亮 Toggle 控制逻辑
+ */
 function applyHighlight(color) {
   const selection = window.getSelection();
   if (!selection.rangeCount || selection.isCollapsed) return;
+
   const range = selection.getRangeAt(0);
-  const mark = document.createElement('mark');
-  mark.style.backgroundColor = color;
-  mark.style.color = '#000';
-  mark.style.padding = '0 2px';
-  mark.style.borderRadius = '2px';
-  range.surroundContents(mark);
+  
+  let parentMark = selection.anchorNode;
+  while (parentMark && parentMark !== textInput) {
+    if (parentMark.nodeName === 'MARK' || (parentMark.style && parentMark.style.backgroundColor)) {
+      break;
+    }
+    parentMark = parentMark.parentNode;
+  }
+
+  if (parentMark && parentMark !== textInput) {
+    const currentColor = parentMark.style.backgroundColor;
+    
+    const tempDiv = document.createElement('div');
+    tempDiv.style.color = color;
+    document.body.appendChild(tempDiv);
+    const targetRgb = window.getComputedStyle(tempDiv).color;
+    document.body.removeChild(tempDiv);
+
+    if (currentColor === targetRgb || currentColor === color) {
+      // 再次点击同色 -> 取消高亮
+      const parent = parentMark.parentNode;
+      while (parentMark.firstChild) {
+        parent.insertBefore(parentMark.firstChild, parentMark);
+      }
+      parent.removeChild(parentMark);
+    } else {
+      // 换颜色
+      parentMark.style.backgroundColor = color;
+    }
+  } else {
+    // 增加高亮
+    const mark = document.createElement('mark');
+    mark.style.backgroundColor = color;
+    mark.style.color = 'inherit';
+    mark.style.padding = '0 2px';
+    mark.style.borderRadius = '2px';
+
+    try {
+      range.surroundContents(mark);
+    } catch (e) {
+      const contents = range.extractContents();
+      mark.appendChild(contents);
+      range.insertNode(mark);
+    }
+  }
+
   textInput.focus();
   state.text = textInput.innerHTML;
   renderAllCards();
@@ -54,8 +98,39 @@ function applyColor(color) {
   execCmd('foreColor', color);
 }
 
+/**
+ * 彻底清除格式（包括：内联样式、底色 mark 标签、以及 H1/H2 块级标题标签）
+ */
 function clearFormat() {
-  execCmd('removeFormat');
+  const selection = window.getSelection();
+  if (!selection.rangeCount) return;
+
+  // 1. 还原块级标题节点为普通段落 <p>
+  document.execCommand('formatBlock', false, '<p>');
+
+  // 2. 执行原生内联格式清除 (清空 B, I, U, 颜色等)
+  document.execCommand('removeFormat', false, null);
+
+  // 3. 彻底清理 <mark> 标签
+  const marks = textInput.querySelectorAll('mark');
+  marks.forEach(mark => {
+    const parent = mark.parentNode;
+    while (mark.firstChild) {
+      parent.insertBefore(mark.firstChild, mark);
+    }
+    parent.removeChild(mark);
+  });
+
+  // 4. 清理所有残留的行内背景色 style
+  const styledEls = textInput.querySelectorAll('[style*="background"]');
+  styledEls.forEach(el => {
+    el.style.backgroundColor = '';
+    if (!el.getAttribute('style')) el.removeAttribute('style');
+  });
+
+  textInput.focus();
+  state.text = textInput.innerHTML;
+  renderAllCards();
 }
 
 async function restoreFont() {
@@ -145,6 +220,7 @@ async function saveCurrentBackground() {
 function renderSavedBgs() {
   const section = $('savedBgSection');
   const list = $('savedBgList');
+  if (!section || !list) return;
   list.innerHTML = '';
 
   if (state.savedBgs.length === 0) {
@@ -200,6 +276,7 @@ function renderSavedBgs() {
 }
 
 function buildEffectChips() {
+  if (!effectChips) return;
   effectChips.innerHTML = '';
   EFFECTS.forEach(fx => {
     const chip = document.createElement('div');
@@ -222,11 +299,12 @@ function buildEffectChips() {
 }
 
 function updateEffectCount() {
-  $('effectCount').textContent = `${state.enabledEffects.size} / ${EFFECTS.length}`;
+  const el = $('effectCount');
+  if (el) el.textContent = `${state.enabledEffects.size} / ${EFFECTS.length}`;
 }
 
 /**
- * 基于拖拽框绝对物理高度 (state.textBox.h) 的物理碰撞分页算法
+ * 物理框高自动分页算法
  */
 function getPagesText() {
   if (!state.text) return [''];
@@ -319,13 +397,11 @@ function getPagesText() {
   return pages.length > 0 ? pages : [''];
 }
 
-let lastPageCount = 0;
-
 function renderAllCards() {
+  if (!previewGrid) return;
   const pagesText = getPagesText();
   const enabledFx = EFFECTS.filter(fx => state.enabledEffects.has(fx.id));
 
-  // 只有当“总卡片数量”改变时才重新创建 DOM，避免用户正在看/拖某张图时闪烁回到第一行
   const currentTotalCards = enabledFx.length * pagesText.length;
   const existingCards = previewGrid.querySelectorAll('.card');
 
@@ -338,7 +414,6 @@ function renderAllCards() {
       });
     });
   } else {
-    // 否则仅原地静默更新文本内容
     let cardIdx = 0;
     enabledFx.forEach(fx => {
       pagesText.forEach((pageContent) => {
@@ -408,6 +483,7 @@ function createCard(fx, pageContent, pageNum, totalPages) {
 }
 
 function applyBackground(bgEl) {
+  if (!bgEl) return;
   bgEl.style.backgroundColor = state.bgColor;
   if (state.bgImage) {
     bgEl.style.backgroundImage = `url(${state.bgImage})`;
@@ -421,6 +497,7 @@ function applyBackground(bgEl) {
 }
 
 function updateTextStyle(textEl, fx, content) {
+  if (!textEl) return;
   textEl.innerHTML = content !== undefined ? content : state.text;
   textEl.style.fontSize = state.fontSize + 'px';
   textEl.style.lineHeight = state.lineHeight;
@@ -529,12 +606,13 @@ function bindEvents() {
     updateStorageInfo();
   };
 
-  $('toggleEffectsBtn').onclick = () => {
-    effectsDrawer.classList.toggle('open');
-  };
+  if ($('toggleEffectsBtn')) {$('toggleEffectsBtn').onclick = () => {
+      effectsDrawer.classList.toggle('open');
+    };
+  }
 
-  $('exportAllBtn').onclick = exportAll;
-  $('savePresetBtn').onclick = savePreset;
+  if ($('exportAllBtn'))$('exportAllBtn').onclick = exportAll;
+  if ($('savePresetBtn'))$('savePresetBtn').onclick = savePreset;
 }
 
 function refreshAllTextStyles() {
@@ -555,7 +633,8 @@ async function updateStorageInfo() {
       const est = await navigator.storage.estimate();
       const used = (est.usage / 1024 / 1024).toFixed(1);
       const quota = (est.quota / 1024 / 1024).toFixed(0);
-      $('storageInfo').textContent = `存储: ${used}MB / ${quota}MB`;
+      const infoEl = $('storageInfo');
+      if (infoEl) infoEl.textContent = `存储: ${used}MB / ${quota}MB`;
     } catch (e) {}
   }
 }
@@ -630,6 +709,7 @@ function savePreset() {
 
 function loadPresetsUI() {
   const list = $('presetList');
+  if (!list) return;
   list.innerHTML = '';
   state.presets.forEach((p, idx) => {
     const item = document.createElement('div');
@@ -672,13 +752,115 @@ function applyPreset(p) {
     b.classList.toggle('active', b.dataset.align === state.align);
   });
 
-  effectChips.querySelectorAll('.chip').forEach(chip => {
-    const id = +chip.dataset.id;
-    chip.classList.toggle('on', state.enabledEffects.has(id));
-  });
+  if (effectChips) {
+    effectChips.querySelectorAll('.chip').forEach(chip => {
+      const id = +chip.dataset.id;
+      chip.classList.toggle('on', state.enabledEffects.has(id));
+    });
+  }
 
   renderAllCards();
   updateEffectCount();
 }
 
 document.addEventListener('DOMContentLoaded', init);
+
+
+/**
+ * 智能标题 Toggle 控制逻辑
+ * 1. 已是当前标题 (如 H1) 时再次点击 -> 还原为普通段落 <p>
+ * 2. 不是当前标题时点击 -> 切换为指定标题 (<h1/h2>)
+ */
+function applyHeading(tag) {
+  const selection = window.getSelection();
+  if (!selection.rangeCount) return;
+
+  // 获取当前光标所在的块级父节点
+  let parentBlock = selection.anchorNode;
+  while (parentBlock && parentBlock !== textInput) {
+    if (/^H[1-6]$/i.test(parentBlock.nodeName) || parentBlock.nodeName === 'P' || parentBlock.nodeName === 'DIV') {
+      break;
+    }
+    parentBlock = parentBlock.parentNode;
+  }
+
+  // 判断是否已经是目标标题标签
+  if (parentBlock && parentBlock.nodeName.toLowerCase() === tag.toLowerCase()) {
+    // 再次点击同名标题 -> 恢复为普通段落文本 <p>
+    document.execCommand('formatBlock', false, '<p>');
+  } else {
+    // 切换为指定标题 (如 <h1> 或 <h2>)
+    document.execCommand('formatBlock', false, `<${tag}>`);
+  }
+
+  textInput.focus();
+  state.text = textInput.innerHTML;
+  renderAllCards();
+}
+
+/**
+ * 彻底清除格式（包括：内联样式、底色 mark 标签、以及 H1/H2 块级标题标签）
+ */
+
+
+/**
+ * 切换图标选择面板的显隐状态
+ */
+function toggleIconPicker(e) {
+  e.stopPropagation();
+  const panel = $('iconPickerPanel');
+  if (panel) {
+    panel.classList.toggle('open');
+  }
+}
+
+/**
+ * 选中某个 Icon/Emoji 并插入到当前富文本光标处
+ */
+function selectIcon(iconStr) {
+  textInput.focus();
+  document.execCommand('insertHTML', false, `<span class="inline-icon">${iconStr}</span>&nbsp;`);
+  state.text = textInput.innerHTML;
+  renderAllCards();
+  
+  // 选完后自动关闭弹窗
+  const panel = $('iconPickerPanel');
+  if (panel) panel.classList.remove('open');
+}
+
+// 点击页面其他空白区域时，自动关闭图标选择弹窗
+document.addEventListener('click', () => {
+  const panel = $('iconPickerPanel');
+  if (panel) panel.classList.remove('open');
+});
+
+/**
+ * 切换图标选择面板显隐
+ */
+function toggleIconPicker(e) {
+  e.stopPropagation();
+  const panel = $('iconPickerPanel');
+  if (panel) {
+    panel.classList.toggle('open');
+  }
+}
+
+/**
+ * 插入 Emoji 表情字符
+ */
+function selectIcon(iconStr) {
+  textInput.focus();
+  document.execCommand('insertHTML', false, `<span class="inline-icon">${iconStr}</span>&nbsp;`);
+  state.text = textInput.innerHTML;
+  renderAllCards();
+  
+  const panel = $('iconPickerPanel');
+  if (panel) panel.classList.remove('open');
+}
+
+// 点击空白区域自动收起弹窗
+document.addEventListener('click', () => {
+  const panel = $('iconPickerPanel');
+  if (panel) panel.classList.remove('open');
+});
+

@@ -65,7 +65,7 @@ input[type="number"] { width: 52px; background: #111; border: 1px solid #444; co
 .btn.export { background: linear-gradient(90deg, #00f2ea, #00c4b4); color: #000; font-weight: 600; border: none; }
 .btn.export:hover { filter: brightness(1.1); }
 
-/* 富文本编辑器样式 */
+/* ===== 富文本编辑器重构布局（解除截断，3行紧凑工具栏） ===== */
 .editor-wrapper {
   display: flex;
   flex-direction: column;
@@ -74,32 +74,46 @@ input[type="number"] { width: 52px; background: #111; border: 1px solid #444; co
   background: #111;
   border: 1px solid #444;
   border-radius: 8px;
-  overflow: hidden;
+  position: relative;
+  overflow: visible !important; /* 关键：防止遮挡图标下拉弹窗 */
+  z-index: 50;
 }
 .editor-toolbar {
   display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
+  flex-direction: column;
+  gap: 5px;
   background: #1e1e24;
-  padding: 4px;
+  padding: 6px 8px;
   border-bottom: 1px solid #333;
+  position: relative;
+  overflow: visible !important; /* 关键：防止遮挡图标下拉弹窗 */
+}
+.tool-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+.tool-label {
+  font-size: 11px;
+  color: #888;
+  user-select: none;
 }
 .btn-tool {
   background: #2a2a35;
   border: 1px solid #444;
   color: #fff;
-  padding: 2px 6px;
+  padding: 3px 7px;
   border-radius: 4px;
   cursor: pointer;
   font-size: 12px;
+  line-height: 1.2;
 }
 .btn-tool:hover {
   border-color: var(--primary);
+  background: #333342;
 }
-.img-btn-tool {
-  display: inline-block;
-  user-select: none;
-}
+
 .rich-editor {
   min-height: 64px;
   max-height: 120px;
@@ -116,13 +130,110 @@ input[type="number"] { width: 52px; background: #111; border: 1px solid #444; co
   color: #666;
 }
 
-/* 预览图文混排图片控制 */
-.inline-rich-img {
-  max-width: 100%;
-  height: auto;
+/* 重置富文本编辑器内 mark 标签的浏览器默认黄色样式 */
+.rich-editor mark,
+.fx-text mark {
+  color: inherit;
+  background-color: transparent;
+}
+
+/* 标题与段落基础重置 */
+.rich-editor h1, .fx-text h1 {
+  font-size: 1.4em;
+  font-weight: 800;
+  margin: 4px 0;
   display: block;
-  margin: 6px 0;
-  border-radius: 6px;
+}
+.rich-editor h2, .fx-text h2 {
+  font-size: 1.2em;
+  font-weight: 700;
+  margin: 4px 0;
+  display: block;
+}
+.rich-editor p, .fx-text p {
+  margin: 0;
+  display: block;
+}
+
+/* ===== Emoji 图标选择器（顶级浮层不遮挡） ===== */
+.icon-picker-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.icon-picker-panel {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 6px;
+  width: 230px;
+  max-height: 180px;           /* 限制展示高度 */
+  overflow-y: auto !important; /* 强制开启内部滚动条 */
+  background: #1e1e24;
+  border: 1px solid #484856;
+  border-radius: 8px;
+  padding: 10px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+  z-index: 9999 !important;    /* 确保浮于窗口最上层 */
+}
+
+.icon-picker-panel.open {
+  display: block;
+}
+
+/* 暗色精细滚动条 */
+.icon-picker-panel::-webkit-scrollbar {
+  width: 5px;
+}
+.icon-picker-panel::-webkit-scrollbar-thumb {
+  background: #555;
+  border-radius: 3px;
+}
+.icon-picker-panel::-webkit-scrollbar-track {
+  background: #15151c;
+}
+
+.picker-group {
+  margin-bottom: 10px;
+}
+.picker-group:last-child {
+  margin-bottom: 0;
+}
+
+.picker-group .group-title {
+  display: block;
+  font-size: 11px;
+  color: #aaa;
+  margin-bottom: 4px;
+}
+
+.group-icons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.group-icons span {
+  font-size: 18px;
+  cursor: pointer;
+  padding: 3px;
+  border-radius: 4px;
+  transition: background 0.15s, transform 0.1s;
+  line-height: 1;
+  user-select: none;
+}
+
+.group-icons span:hover {
+  background: #3b3b48;
+  transform: scale(1.15);
+}
+
+.inline-icon {
+  display: inline-block;
+  margin: 0 2px;
+  vertical-align: middle;
+  line-height: 1;
 }
 
 /* 效果开关抽屉 */

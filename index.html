@@ -12,20 +12,93 @@
 <!-- 控制面板 -->
 <div class="sticky-panel">
   <div class="panel-row">
+    
     <!-- 富文本编辑器容器 -->
     <div class="editor-wrapper">
       <div class="editor-toolbar">
-        <button class="btn-tool" onclick="execCmd('bold')" title="加粗"><b>B</b></button>
-        <button class="btn-tool" onclick="execCmd('italic')" title="斜体"><i>I</i></button>
-        <button class="btn-tool" onclick="execCmd('underline')" title="下划线"><u>U</u></button>
-        <button class="btn-tool" onclick="applyHighlight('#ffe066')" style="background:#ffe066;color:#000;">高亮</button>
-        <button class="btn-tool" onclick="applyHighlight('#ff2d95')" style="background:#ff2d95;color:#fff;">高亮</button>
-        <button class="btn-tool" onclick="applyHighlight('#00f2ea')" style="background:#00f2ea;color:#000;">高亮</button>
-        <button class="btn-tool" onclick="applyColor('#ff0050')" style="color:#ff0050;">红字</button>
-        <button class="btn-tool" onclick="applyColor('#00f2ea')" style="color:#00f2ea;">青字</button>
-        <button class="btn-tool" onclick="applyColor('#ffe066')" style="color:#ffe066;">黄字</button>
-        <button class="btn-tool" onclick="clearFormat()" title="清除格式">清除</button>
+        <!-- 第一行：块级与排版 -->
+        <div class="tool-row">
+          <button class="btn-tool" onclick="applyHeading('h1')" title="一级标题">H1</button>
+          <button class="btn-tool" onclick="applyHeading('h2')" title="二级标题">H2</button>
+          <button class="btn-tool" onclick="applyHeading('p')" title="正文文本">P</button>
+          <button class="btn-tool" onclick="execCmd('bold')" title="加粗"><b>B</b></button>
+          <button class="btn-tool" onclick="execCmd('italic')" title="斜体"><i>I</i></button>
+          <button class="btn-tool" onclick="execCmd('underline')" title="下划线"><u>U</u></button>
+          <button class="btn-tool" onclick="clearFormat()" title="清除格式">清除</button>
+        </div>
+
+        <!-- 第二行：底色高亮 -->
+        <div class="tool-row">
+          <span class="tool-label">底色:</span>
+          <button class="btn-tool" onclick="applyHighlight('#ffe066')" style="background:#ffe066;color:#000;">黄</button>
+          <button class="btn-tool" onclick="applyHighlight('#ff2d95')" style="background:#ff2d95;color:#fff;">粉</button>
+          <button class="btn-tool" onclick="applyHighlight('#00f2ea')" style="background:#00f2ea;color:#000;">青</button>
+        </div>
+
+        <!-- 第三行：字色与 Emoji 选择器 -->
+        <div class="tool-row">
+          <span class="tool-label">字色:</span>
+          <button class="btn-tool" onclick="applyColor('#ff0050')" style="color:#ff0050;">红</button>
+          <button class="btn-tool" onclick="applyColor('#00f2ea')" style="color:#00f2ea;">青</button>
+          <button class="btn-tool" onclick="applyColor('#ffe066')" style="color:#ffe066;">黄</button>
+
+          <!-- 🔥 下拉式 Emoji 选择器（无 SVG，顶级浮层） -->
+          <div class="icon-picker-wrapper">
+            <button class="btn-tool btn-picker-trigger" id="iconPickerBtn" onclick="toggleIconPicker(event)">😀 图标 ▾</button>
+            
+            <div class="icon-picker-panel" id="iconPickerPanel" onclick="event.stopPropagation()">
+              <div class="picker-group">
+                <span class="group-title">🔥 爆款热门</span>
+                <div class="group-icons">
+                  <span onclick="selectIcon('🔥')">🔥</span>
+                  <span onclick="selectIcon('💡')">💡</span>
+                  <span onclick="selectIcon('📌')">📌</span>
+                  <span onclick="selectIcon('⚠️')">⚠️</span>
+                  <span onclick="selectIcon('✨')">✨</span>
+                  <span onclick="selectIcon('🚀')">🚀</span>
+                  <span onclick="selectIcon('🎯')">🎯</span>
+                  <span onclick="selectIcon('💎')">💎</span>
+                  <span onclick="selectIcon('📈')">📈</span>
+                  <span onclick="selectIcon('🎁')">🎁</span>
+                </div>
+              </div>
+
+              <div class="picker-group">
+                <span class="group-title">👉 提示手势</span>
+                <div class="group-icons">
+                  <span onclick="selectIcon('👇')">👇</span>
+                  <span onclick="selectIcon('👉')">👉</span>
+                  <span onclick="selectIcon('👆')">👆</span>
+                  <span onclick="selectIcon('👍')">👍</span>
+                  <span onclick="selectIcon('👏')">👏</span>
+                  <span onclick="selectIcon('🙌')">🙌</span>
+                  <span onclick="selectIcon('💪')">💪</span>
+                  <span onclick="selectIcon('✅')">✅</span>
+                  <span onclick="selectIcon('❌')">❌</span>
+                  <span onclick="selectIcon('❓')">❓</span>
+                </div>
+              </div>
+
+              <div class="picker-group">
+                <span class="group-title">🌟 情绪标号</span>
+                <div class="group-icons">
+                  <span onclick="selectIcon('😍')">😍</span>
+                  <span onclick="selectIcon('😱')">😱</span>
+                  <span onclick="selectIcon('🤯')">🤯</span>
+                  <span onclick="selectIcon('😎')">😎</span>
+                  <span onclick="selectIcon('1️⃣')">1️⃣</span>
+                  <span onclick="selectIcon('2️⃣')">2️⃣</span>
+                  <span onclick="selectIcon('3️⃣')">3️⃣</span>
+                  <span onclick="selectIcon('4️⃣')">4️⃣</span>
+                  <span onclick="selectIcon('5️⃣')">5️⃣</span>
+                  <span onclick="selectIcon('💯')">💯</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
+
       <div id="textInput" contenteditable="true" class="rich-editor" placeholder="在此输入文案，拖动任意卡片中的文本框调整大小，自动按框底部边缘物理分页...">今天也要元气满满，加油！冲冲冲。<br>这是一段较长的测试文本，如果在框内自动折行或者手动换行超过设定的框高度，就会自动分页生成第二张图片。<br>这里是超过框高度后的内容，会自动归入第2张卡片！</div>
     </div>
 
