@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>抖音爆款文字排版与 AE 质感特效生成器（IndexedDB 持久化版）</title>
+<title>抖音爆款文字排版与 AE 质感特效生成器</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <link rel="stylesheet" href="style.css">
 </head>
@@ -12,14 +12,21 @@
 <!-- 控制面板 -->
 <div class="sticky-panel">
   <div class="panel-row">
-    <textarea id="textInput" placeholder="在此输入文案，支持自动精准折行分页...">今天也要元气满满，加油！冲冲冲。
-这是一段较长的测试文本，如果在框内自动折行或者手动换行超过设定的行数，就会自动分页生成第二张图片。
-这里是超过8行后的内容，会自动归入第2张卡片！</textarea>
-
-    <div class="control-group">
-      <label>每页最高行数</label>
-      <input type="number" id="linesPerPage" min="1" max="30" value="8" style="width:50px;">
-      <span style="color:#888;font-size:12px;">行/页</span>
+    <!-- 富文本编辑器容器 -->
+    <div class="editor-wrapper">
+      <div class="editor-toolbar">
+        <button class="btn-tool" onclick="execCmd('bold')" title="加粗"><b>B</b></button>
+        <button class="btn-tool" onclick="execCmd('italic')" title="斜体"><i>I</i></button>
+        <button class="btn-tool" onclick="execCmd('underline')" title="下划线"><u>U</u></button>
+        <button class="btn-tool" onclick="applyHighlight('#ffe066')" style="background:#ffe066;color:#000;">高亮</button>
+        <button class="btn-tool" onclick="applyHighlight('#ff2d95')" style="background:#ff2d95;color:#fff;">高亮</button>
+        <button class="btn-tool" onclick="applyHighlight('#00f2ea')" style="background:#00f2ea;color:#000;">高亮</button>
+        <button class="btn-tool" onclick="applyColor('#ff0050')" style="color:#ff0050;">红字</button>
+        <button class="btn-tool" onclick="applyColor('#00f2ea')" style="color:#00f2ea;">青字</button>
+        <button class="btn-tool" onclick="applyColor('#ffe066')" style="color:#ffe066;">黄字</button>
+        <button class="btn-tool" onclick="clearFormat()" title="清除格式">清除</button>
+      </div>
+      <div id="textInput" contenteditable="true" class="rich-editor" placeholder="在此输入文案，拖动任意卡片中的文本框调整大小，自动按框底部边缘物理分页...">今天也要元气满满，加油！冲冲冲。<br>这是一段较长的测试文本，如果在框内自动折行或者手动换行超过设定的框高度，就会自动分页生成第二张图片。<br>这里是超过框高度后的内容，会自动归入第2张卡片！</div>
     </div>
 
     <div class="control-group">
@@ -38,7 +45,7 @@
       <span id="letterSpacingVal">0</span>px
     </div>
     <div class="control-group">
-      <button class="btn" id="boldBtn">B 加粗</button>
+      <button class="btn" id="boldBtn">B 全局加粗</button>
       <button class="btn active" data-align="left">左对齐</button>
       <button class="btn" data-align="center">居中</button>
       <button class="btn" data-align="right">右对齐</button>
@@ -47,7 +54,7 @@
 
   <div class="panel-row">
     <div class="control-group">
-      <label>文字颜色</label>
+      <label>文字基础颜色</label>
       <input type="color" id="textColor" value="#ffffff">
       <button class="btn" id="resetColorBtn">重置</button>
     </div>

@@ -14,13 +14,48 @@ async function init() {
     alert('本地数据库初始化失败，大文件持久化功能可能不可用');
   }
 
-  textInput.value = state.text;
+  if (state.text) {
+    textInput.innerHTML = state.text;
+  } else {
+    state.text = textInput.innerHTML;
+  }
+
   buildEffectChips();
   renderAllCards();
   bindEvents();
   loadPresetsUI();
   updateEffectCount();
   updateStorageInfo();
+}
+
+function execCmd(command, value = null) {
+  document.execCommand(command, false, value);
+  textInput.focus();
+  state.text = textInput.innerHTML;
+  renderAllCards();
+}
+
+function applyHighlight(color) {
+  const selection = window.getSelection();
+  if (!selection.rangeCount || selection.isCollapsed) return;
+  const range = selection.getRangeAt(0);
+  const mark = document.createElement('mark');
+  mark.style.backgroundColor = color;
+  mark.style.color = '#000';
+  mark.style.padding = '0 2px';
+  mark.style.borderRadius = '2px';
+  range.surroundContents(mark);
+  textInput.focus();
+  state.text = textInput.innerHTML;
+  renderAllCards();
+}
+
+function applyColor(color) {
+  execCmd('foreColor', color);
+}
+
+function clearFormat() {
+  execCmd('removeFormat');
 }
 
 async function restoreFont() {
@@ -191,20 +226,21 @@ function updateEffectCount() {
 }
 
 /**
- * 核心优化：利用 DOM 离屏真实渲染与 Range API 捕获准确断行
- * 彻底解决调节大字号、排版变空乱的问题，确保字数满满紧凑填满才排下一行
+ * 基于拖拽框绝对物理高度 (state.textBox.h) 的物理碰撞分页算法
  */
 function getPagesText() {
   if (!state.text) return [''];
 
-  const containerWidth = state.textBox.w || 210;
+  const boxW = (state.textBox && state.textBox.w) ? state.textBox.w : 210;
+  const boxH = (state.textBox && state.textBox.h) ? state.textBox.h : 200;
+
   const offscreen = document.createElement('div');
   offscreen.style.cssText = `
     position: absolute;
     visibility: hidden;
     left: -9999px;
     top: -9999px;
-    width: ${containerWidth}px;
+    width: ${boxW}px;
     font-size: ${state.fontSize}px;
     line-height: ${state.lineHeight};
     letter-spacing: ${state.letterSpacing}px;
@@ -217,69 +253,104 @@ function getPagesText() {
   `;
   document.body.appendChild(offscreen);
 
-  const paragraphs = state.text.split('\n');
-  const allLines = [];
-
-  paragraphs.forEach(para => {
-    if (para === '') {
-      allLines.push('');
-      return;
-    }
-
-    const paraSpan = document.createElement('span');
-    paraSpan.textContent = para;
-    offscreen.appendChild(paraSpan);
-
-    const range = document.createRange();
-    let currentLineText = '';
-    let lastY = null;
-
-    for (let i = 0; i < para.length; i++) {
-      range.setStart(paraSpan.firstChild, i);
-      range.setEnd(paraSpan.firstChild, i + 1);
-      const rect = range.getBoundingClientRect();
-
-      if (lastY === null) {
-        lastY = rect.top;
-      }
-
-      if (Math.abs(rect.top - lastY) > 2 && currentLineText.length > 0) {
-        allLines.push(currentLineText);
-        currentLineText = para[i];
-        lastY = rect.top;
-      } else {
-        currentLineText += para[i];
-      }
-    }
-    if (currentLineText) {
-      allLines.push(currentLineText);
-    }
-
-    offscreen.removeChild(paraSpan);
-  });
-
-  document.body.removeChild(offscreen);
-
-  const maxLines = state.linesPerPage || 8;
+  let remainingHTML = state.text;
   const pages = [];
-  for (let i = 0; i < allLines.length; i += maxLines) {
-    pages.push(allLines.slice(i, i + maxLines).join('\n'));
+
+  while (remainingHTML.trim().length > 0) {
+    offscreen.innerHTML = remainingHTML;
+
+    if (offscreen.offsetHeight <= boxH) {
+      pages.push(remainingHTML);
+      break;
+    }
+
+    let pageHTML = '';
+    const range = document.createRange();
+    const startTop = offscreen.getBoundingClientRect().top;
+
+    const walker = document.createTreeWalker(offscreen, NodeFilter.SHOW_TEXT, null, false);
+    let textNode;
+    let foundBoundary = false;
+
+    while ((textNode = walker.nextNode())) {
+      for (let i = 0; i < textNode.textContent.length; i++) {
+        range.setStart(textNode, i);
+        range.setEnd(textNode, i + 1);
+        const rect = range.getBoundingClientRect();
+        
+        if (rect.bottom - startTop > boxH) {
+          foundBoundary = true;
+          break;
+        }
+      }
+      if (foundBoundary) break;
+    }
+
+    if (foundBoundary && range.startContainer) {
+      const splitRange = document.createRange();
+      splitRange.setStart(offscreen, 0);
+      splitRange.setEnd(range.startContainer, range.startOffset);
+
+      const div = document.createElement('div');
+      div.appendChild(splitRange.cloneContents());
+      pageHTML = div.innerHTML;
+
+      const restRange = document.createRange();
+      restRange.setStart(range.startContainer, range.startOffset);
+      restRange.setEnd(offscreen, offscreen.childNodes.length);
+
+      const restDiv = document.createElement('div');
+      restDiv.appendChild(restRange.cloneContents());
+      remainingHTML = restDiv.innerHTML;
+    } else {
+      pages.push(remainingHTML);
+      break;
+    }
+
+    if (!pageHTML || pageHTML === remainingHTML) {
+      pages.push(remainingHTML);
+      break;
+    }
+
+    pages.push(pageHTML);
   }
 
+  document.body.removeChild(offscreen);
   return pages.length > 0 ? pages : [''];
 }
 
+let lastPageCount = 0;
+
 function renderAllCards() {
-  previewGrid.innerHTML = '';
   const pagesText = getPagesText();
   const enabledFx = EFFECTS.filter(fx => state.enabledEffects.has(fx.id));
 
-  enabledFx.forEach(fx => {
-    pagesText.forEach((pageContent, pageIdx) => {
-      const card = createCard(fx, pageContent, pageIdx + 1, pagesText.length);
-      previewGrid.appendChild(card);
+  // 只有当“总卡片数量”改变时才重新创建 DOM，避免用户正在看/拖某张图时闪烁回到第一行
+  const currentTotalCards = enabledFx.length * pagesText.length;
+  const existingCards = previewGrid.querySelectorAll('.card');
+
+  if (existingCards.length !== currentTotalCards) {
+    previewGrid.innerHTML = '';
+    enabledFx.forEach(fx => {
+      pagesText.forEach((pageContent, pageIdx) => {
+        const card = createCard(fx, pageContent, pageIdx + 1, pagesText.length);
+        previewGrid.appendChild(card);
+      });
     });
-  });
+  } else {
+    // 否则仅原地静默更新文本内容
+    let cardIdx = 0;
+    enabledFx.forEach(fx => {
+      pagesText.forEach((pageContent) => {
+        const card = existingCards[cardIdx++];
+        if (card) {
+          const textEl = card.querySelector('.fx-text');
+          if (textEl) textEl.innerHTML = pageContent;
+        }
+      });
+    });
+  }
+
   syncAllTextBoxes();
 }
 
@@ -350,7 +421,7 @@ function applyBackground(bgEl) {
 }
 
 function updateTextStyle(textEl, fx, content) {
-  textEl.textContent = content !== undefined ? content : state.text;
+  textEl.innerHTML = content !== undefined ? content : state.text;
   textEl.style.fontSize = state.fontSize + 'px';
   textEl.style.lineHeight = state.lineHeight;
   const ls = state.letterSpacing + (fx.extraLetter || 0);
@@ -361,18 +432,12 @@ function updateTextStyle(textEl, fx, content) {
   if (state.textColor) {
     textEl.style.color = state.textColor;
     textEl.style.webkitTextFillColor = state.textColor;
-    textEl.style.background = 'none';
   }
 }
 
 function bindEvents() {
   textInput.addEventListener('input', () => {
-    state.text = textInput.value;
-    renderAllCards();
-  });
-
-  $('linesPerPage').addEventListener('input', e => {
-    state.linesPerPage = Math.max(1, +e.target.value || 8);
+    state.text = textInput.innerHTML;
     renderAllCards();
   });
 
@@ -595,7 +660,7 @@ function applyPreset(p) {
   state.textBox = { ...p.textBox };
   state.enabledEffects = new Set(p.enabled || EFFECTS.map(e => e.id));
 
-  textInput.value = state.text;
+  textInput.innerHTML = state.text;
   $('fontSize').value = state.fontSize;
   $('fontSizeVal').textContent = state.fontSize;
   $('lineHeight').value = state.lineHeight;
@@ -616,5 +681,4 @@ function applyPreset(p) {
   updateEffectCount();
 }
 
-// 页面加载完成后启动
 document.addEventListener('DOMContentLoaded', init);
