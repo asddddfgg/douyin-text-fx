@@ -16,7 +16,7 @@ body {
   min-height: 100vh;
 }
 
-/* ===== 顶部固定控制面板 ===== */
+/* ===== 顶部固定控制面板（左右分栏布局） ===== */
 .sticky-panel {
   position: sticky;
   top: 0;
@@ -26,6 +26,38 @@ body {
   padding: 12px 16px;
   box-shadow: 0 4px 20px rgba(0,0,0,0.4);
 }
+
+/* 总体左右两部分分栏容器 */
+.toolbar-layout {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch; /* 保证左右两侧高度一致 */
+  gap: 12px;
+}
+
+/* 左部分：富文本编辑器区 */
+.toolbar-left {
+  flex: 0 0 380px; /* 设定左侧编辑器区域的标准宽度，可根据喜好微调 */
+  display: flex;
+  flex-direction: column;
+  background: #111;
+  border: 1px solid #444;
+  border-radius: 8px;
+  position: relative;
+  overflow: visible !important;
+  z-index: 50;
+}
+
+/* 右部分：其它工具区（排满自动折行） */
+.toolbar-right {
+  flex: 1; /* 占据剩余所有空间 */
+  display: flex;
+  flex-wrap: wrap; /* 核心：排满自动起新行 */
+  align-content: flex-start; /* 多行时向上对齐 */
+  align-items: center;
+  gap: 8px;
+}
+
 .panel-row {
   display: flex;
   flex-wrap: wrap;
@@ -34,6 +66,7 @@ body {
   margin-bottom: 10px;
 }
 .panel-row:last-child { margin-bottom: 0; }
+
 .control-group {
   display: flex;
   align-items: center;
@@ -65,19 +98,7 @@ input[type="number"] { width: 52px; background: #111; border: 1px solid #444; co
 .btn.export { background: linear-gradient(90deg, #00f2ea, #00c4b4); color: #000; font-weight: 600; border: none; }
 .btn.export:hover { filter: brightness(1.1); }
 
-/* ===== 富文本编辑器重构布局（解除截断，3行紧凑工具栏） ===== */
-.editor-wrapper {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  max-width: 420px;
-  background: #111;
-  border: 1px solid #444;
-  border-radius: 8px;
-  position: relative;
-  overflow: visible !important; /* 关键：防止遮挡图标下拉弹窗 */
-  z-index: 50;
-}
+/* ===== 富文本编辑器内部样式 ===== */
 .editor-toolbar {
   display: flex;
   flex-direction: column;
@@ -86,7 +107,9 @@ input[type="number"] { width: 52px; background: #111; border: 1px solid #444; co
   padding: 6px 8px;
   border-bottom: 1px solid #333;
   position: relative;
-  overflow: visible !important; /* 关键：防止遮挡图标下拉弹窗 */
+  overflow: visible !important;
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
 }
 .tool-row {
   display: flex;
@@ -115,8 +138,9 @@ input[type="number"] { width: 52px; background: #111; border: 1px solid #444; co
 }
 
 .rich-editor {
-  min-height: 64px;
-  max-height: 120px;
+  flex: 1;
+  min-height: 80px;
+  max-height: 140px;
   color: #fff;
   padding: 8px 12px;
   font-size: 14px;
@@ -124,6 +148,8 @@ input[type="number"] { width: 52px; background: #111; border: 1px solid #444; co
   outline: none;
   overflow-y: auto;
   word-break: break-word;
+  border-bottom-left-radius: 8px;
+  border-bottom-right-radius: 8px;
 }
 .rich-editor[placeholder]:empty:before {
   content: attr(placeholder);
@@ -168,7 +194,7 @@ input[type="number"] { width: 52px; background: #111; border: 1px solid #444; co
   left: 0;
   margin-top: 6px;
   width: 230px;
-  max-height: 180px;           /* 限制展示高度 */
+  max-height: 180px;          /* 限制展示高度 */
   overflow-y: auto !important; /* 强制开启内部滚动条 */
   background: #1e1e24;
   border: 1px solid #484856;
@@ -183,14 +209,17 @@ input[type="number"] { width: 52px; background: #111; border: 1px solid #444; co
 }
 
 /* 暗色精细滚动条 */
-.icon-picker-panel::-webkit-scrollbar {
+.icon-picker-panel::-webkit-scrollbar,
+.rich-editor::-webkit-scrollbar {
   width: 5px;
 }
-.icon-picker-panel::-webkit-scrollbar-thumb {
+.icon-picker-panel::-webkit-scrollbar-thumb,
+.rich-editor::-webkit-scrollbar-thumb {
   background: #555;
   border-radius: 3px;
 }
-.icon-picker-panel::-webkit-scrollbar-track {
+.icon-picker-panel::-webkit-scrollbar-track,
+.rich-editor::-webkit-scrollbar-track {
   background: #15151c;
 }
 

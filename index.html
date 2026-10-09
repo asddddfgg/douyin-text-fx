@@ -11,10 +11,12 @@
 
 <!-- 控制面板 -->
 <div class="sticky-panel">
-  <div class="panel-row">
+  <!-- 核心：左右分栏控制面板 -->
+  <div class="toolbar-layout">
     
-    <!-- 富文本编辑器容器 -->
-    <div class="editor-wrapper">
+    <!-- 左侧：富文本编辑区（独立成块，左右等高） -->
+    <div class="toolbar-left">
+      <!-- 3行紧凑富文本工具栏 -->
       <div class="editor-toolbar">
         <!-- 第一行：块级与排版 -->
         <div class="tool-row">
@@ -99,108 +101,110 @@
         </div>
       </div>
 
+      <!-- 编辑器输入框 -->
       <div id="textInput" contenteditable="true" class="rich-editor" placeholder="在此输入文案，拖动任意卡片中的文本框调整大小，自动按框底部边缘物理分页...">今天也要元气满满，加油！冲冲冲。<br>这是一段较长的测试文本，如果在框内自动折行或者手动换行超过设定的框高度，就会自动分页生成第二张图片。<br>这里是超过框高度后的内容，会自动归入第2张卡片！</div>
     </div>
 
-    <div class="control-group">
-      <label>字号</label>
-      <input type="range" id="fontSize" min="12" max="33" value="18" step="1">
-      <span id="fontSizeVal">18</span>px
-    </div>
-    <div class="control-group">
-      <label>行距</label>
-      <input type="range" id="lineHeight" min="1.0" max="2.5" value="1.4" step="0.1">
-      <span id="lineHeightVal">1.4</span>
-    </div>
-    <div class="control-group">
-      <label>字间距</label>
-      <input type="range" id="letterSpacing" min="0" max="10" value="0" step="1">
-      <span id="letterSpacingVal">0</span>px
-    </div>
-    <div class="control-group">
-      <button class="btn" id="boldBtn">B 全局加粗</button>
-      <button class="btn active" data-align="left">左对齐</button>
-      <button class="btn" data-align="center">居中</button>
-      <button class="btn" data-align="right">右对齐</button>
-    </div>
-  </div>
-
-  <div class="panel-row">
-    <div class="control-group">
-      <label>文字基础颜色</label>
-      <input type="color" id="textColor" value="#ffffff">
-      <button class="btn" id="resetColorBtn">重置</button>
-    </div>
-
-    <div class="control-group">
-      <label>背景色</label>
-      <div class="bg-swatches" id="bgSwatches">
-        <div class="swatch active" style="background:#f5f5f5" data-bg="#f5f5f5"></div>
-        <div class="swatch" style="background:#1a1a1a" data-bg="#1a1a1a"></div>
-        <div class="swatch" style="background:#000" data-bg="#000000"></div>
-        <div class="swatch" style="background:#e8f4f8" data-bg="#e8f4f8"></div>
-        <div class="swatch" style="background:#fff8e7" data-bg="#fff8e7"></div>
-        <div class="swatch" style="background:#2d1b4e" data-bg="#2d1b4e"></div>
+    <!-- 右侧：其它所有工具区（自动排满折行，弹性布局） -->
+    <div class="toolbar-right">
+      <div class="control-group">
+        <label>字号</label>
+        <input type="range" id="fontSize" min="12" max="33" value="18" step="1">
+        <span id="fontSizeVal">18</span>px
       </div>
-      <input type="color" id="customBg" value="#f5f5f5" title="自定义背景色">
-      <button class="btn" id="saveBgBtn">收藏当前背景</button>
+      <div class="control-group">
+        <label>行距</label>
+        <input type="range" id="lineHeight" min="1.0" max="2.5" value="1.4" step="0.1">
+        <span id="lineHeightVal">1.4</span>
+      </div>
+      <div class="control-group">
+        <label>字间距</label>
+        <input type="range" id="letterSpacing" min="0" max="10" value="0" step="1">
+        <span id="letterSpacingVal">0</span>px
+      </div>
+      <div class="control-group">
+        <button class="btn" id="boldBtn">B 全局加粗</button>
+        <button class="btn active" data-align="left">左对齐</button>
+        <button class="btn" data-align="center">居中</button>
+        <button class="btn" data-align="right">右对齐</button>
+      </div>
+
+      <div class="control-group">
+        <label>文字基础颜色</label>
+        <input type="color" id="textColor" value="#ffffff">
+        <button class="btn" id="resetColorBtn">重置</button>
+      </div>
+
+      <div class="control-group">
+        <label>背景色</label>
+        <div class="bg-swatches" id="bgSwatches">
+          <div class="swatch active" style="background:#f5f5f5" data-bg="#f5f5f5"></div>
+          <div class="swatch" style="background:#1a1a1a" data-bg="#1a1a1a"></div>
+          <div class="swatch" style="background:#000" data-bg="#000000"></div>
+          <div class="swatch" style="background:#e8f4f8" data-bg="#e8f4f8"></div>
+          <div class="swatch" style="background:#fff8e7" data-bg="#fff8e7"></div>
+          <div class="swatch" style="background:#2d1b4e" data-bg="#2d1b4e"></div>
+        </div>
+        <input type="color" id="customBg" value="#f5f5f5" title="自定义背景色">
+        <button class="btn" id="saveBgBtn">收藏当前背景</button>
+      </div>
+
+      <div class="control-group" id="savedBgSection" style="display:none;">
+        <label>收藏背景</label>
+        <div class="bg-swatches" id="savedBgList"></div>
+      </div>
+
+      <div class="control-group">
+        <label>背景图</label>
+        <input type="file" id="bgImageInput" accept="image/*" style="font-size:12px;width:140px;">
+        <label>亮度</label>
+        <input type="range" id="bgBrightness" min="0.3" max="1.5" value="1" step="0.05" style="width:60px;">
+        <label>透明</label>
+        <input type="range" id="bgOpacity" min="0" max="1" value="1" step="0.05" style="width:60px;">
+        <button class="btn" id="clearBgBtn">清除</button>
+      </div>
+
+      <div class="control-group">
+        <label>视图</label>
+        <button class="btn" data-view="safe">安全线</button>
+        <button class="btn active" data-view="phone">手机外观</button>
+        <button class="btn" data-view="pure">纯正文</button>
+      </div>
+
+      <div class="control-group">
+        <label>导出清晰度</label>
+        <input type="range" id="exportScale" min="3" max="6" value="3" step="1" style="width:70px;">
+        <span id="exportScaleVal">3</span>× 高清
+      </div>
+
+      <div class="control-group">
+        <label>本地字体</label>
+        <input type="file" id="fontInput" accept=".ttf,.otf,.woff,.woff2" style="font-size:12px;width:130px;">
+        <button class="btn" id="resetFontBtn">系统字体</button>
+        <span class="font-info" id="fontInfo">未加载自定义字体</span>
+        <span class="storage-info" id="storageInfo"></span>
+      </div>
+
+      <div class="control-group">
+        <button class="btn" id="toggleEffectsBtn">效果筛选 ▾</button>
+        <span id="effectCount">72 / 72</span>
+      </div>
+
+      <div class="control-group">
+        <button class="btn export" id="exportAllBtn">批量导出全部</button>
+      </div>
+
+      <div class="control-group">
+        <label>预设</label>
+        <input type="text" id="presetName" placeholder="预设名" style="width:80px;background:#111;border:1px solid #444;color:#fff;border-radius:4px;padding:3px 6px;font-size:12px;">
+        <button class="btn" id="savePresetBtn">保存</button>
+        <div class="preset-list" id="presetList"></div>
+      </div>
     </div>
 
-    <div class="control-group" id="savedBgSection" style="display:none;">
-      <label>收藏背景</label>
-      <div class="bg-swatches" id="savedBgList"></div>
-    </div>
-
-    <div class="control-group">
-      <label>背景图</label>
-      <input type="file" id="bgImageInput" accept="image/*" style="font-size:12px;width:140px;">
-      <label>亮度</label>
-      <input type="range" id="bgBrightness" min="0.3" max="1.5" value="1" step="0.05" style="width:60px;">
-      <label>透明</label>
-      <input type="range" id="bgOpacity" min="0" max="1" value="1" step="0.05" style="width:60px;">
-      <button class="btn" id="clearBgBtn">清除</button>
-    </div>
   </div>
 
-  <div class="panel-row">
-    <div class="control-group">
-      <label>视图</label>
-      <button class="btn" data-view="safe">安全线</button>
-      <button class="btn active" data-view="phone">手机外观</button>
-      <button class="btn" data-view="pure">纯正文</button>
-    </div>
-
-    <div class="control-group">
-      <label>导出清晰度</label>
-      <input type="range" id="exportScale" min="3" max="6" value="3" step="1" style="width:70px;">
-      <span id="exportScaleVal">3</span>× 高清
-    </div>
-
-    <div class="control-group">
-      <label>本地字体</label>
-      <input type="file" id="fontInput" accept=".ttf,.otf,.woff,.woff2" style="font-size:12px;width:130px;">
-      <button class="btn" id="resetFontBtn">系统字体</button>
-      <span class="font-info" id="fontInfo">未加载自定义字体</span>
-      <span class="storage-info" id="storageInfo"></span>
-    </div>
-
-    <div class="control-group">
-      <button class="btn" id="toggleEffectsBtn">效果筛选 ▾</button>
-      <span id="effectCount">72 / 72</span>
-    </div>
-
-    <div class="control-group">
-      <button class="btn export" id="exportAllBtn">批量导出全部</button>
-    </div>
-
-    <div class="control-group">
-      <label>预设</label>
-      <input type="text" id="presetName" placeholder="预设名" style="width:80px;background:#111;border:1px solid #444;color:#fff;border-radius:4px;padding:3px 6px;font-size:12px;">
-      <button class="btn" id="savePresetBtn">保存</button>
-      <div class="preset-list" id="presetList"></div>
-    </div>
-  </div>
-
+  <!-- 效果抽屉 -->
   <div class="effects-drawer" id="effectsDrawer">
     <div class="effect-chips" id="effectChips"></div>
   </div>
