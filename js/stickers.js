@@ -257,6 +257,22 @@
 
     document.body.appendChild(panel);
 
+    // 默认收起贴纸面板，并记住用户选择；不修改贴纸数据
+    const stickerCollapseKey = "douyin-sticker-panel-collapsed";
+    const stickerToggle = panel.querySelector("#sticker-panel-toggle");
+    let stickerCollapsed = true;
+
+    try {
+      const savedCollapse = localStorage.getItem(stickerCollapseKey);
+      if (savedCollapse === "false") stickerCollapsed = false;
+    } catch (error) {
+      console.warn("读取贴纸面板折叠状态失败：", error);
+    }
+
+    panel.classList.toggle("collapsed", stickerCollapsed);
+    stickerToggle.textContent = stickerCollapsed ? "+" : "−";
+    stickerToggle.setAttribute("aria-expanded", String(!stickerCollapsed));
+
     // 可拖动面板：位置保存在浏览器本地，不影响贴纸数据
     const panelHead = panel.querySelector(".sticker-panel-head");
     const positionKey = "douyin-sticker-panel-position";
@@ -323,10 +339,17 @@
     panelHead.addEventListener("pointerup", finishPanelDrag);
     panelHead.addEventListener("pointercancel", finishPanelDrag);
 
-    document.querySelector("#sticker-panel-toggle").addEventListener("click", () => {
-      panel.classList.toggle("collapsed");
-      document.querySelector("#sticker-panel-toggle").textContent =
-        panel.classList.contains("collapsed") ? "+" : "−";
+    stickerToggle.addEventListener("click", () => {
+      stickerCollapsed = !panel.classList.contains("collapsed");
+      panel.classList.toggle("collapsed", stickerCollapsed);
+      stickerToggle.textContent = stickerCollapsed ? "+" : "−";
+      stickerToggle.setAttribute("aria-expanded", String(!stickerCollapsed));
+
+      try {
+        localStorage.setItem(stickerCollapseKey, String(stickerCollapsed));
+      } catch (error) {
+        console.warn("保存贴纸面板折叠状态失败：", error);
+      }
     });
 
     document.querySelector("#sticker-page").addEventListener("change", event => {
