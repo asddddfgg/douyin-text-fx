@@ -1,5 +1,5 @@
 const DB_NAME = 'DouyinTextFX_DB';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 let db = null;
 
 function openDB() {
@@ -12,6 +12,9 @@ function openDB() {
       }
       if (!database.objectStoreNames.contains('bgs')) {
         database.createObjectStore('bgs', { keyPath: 'id', autoIncrement: true });
+      }
+      if (!database.objectStoreNames.contains('stickers')) {
+        database.createObjectStore('stickers', { keyPath: 'id' });
       }
     };
     req.onsuccess = (e) => {

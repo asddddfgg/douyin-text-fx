@@ -9,6 +9,7 @@ async function init() {
     await openDB();
     await restoreFont();
     await restoreSavedBgs();
+    await restoreStickers();
   } catch (err) {
     console.error('IndexedDB 初始化失败', err);
   }
@@ -478,6 +479,7 @@ function createCard(fx, pageContent, pageNum, totalPages) {
 
   const textBox = card.querySelector('.text-box');
   setupDragResize(textBox);
+  renderStickersForCanvas(card.querySelector(".canvas-wrap"), pageNum);
 
   return card;
 }
@@ -680,6 +682,14 @@ async function exportSinglePage(id, pageNum) {
       useCORS: true,
       backgroundColor: null,
       logging: false,
+      onclone: (clonedDocument) => {
+        clonedDocument.querySelectorAll('.sticker-item').forEach((el) => {
+          el.classList.remove('is-selected');
+        });
+        clonedDocument.querySelectorAll('.sticker-handle, .sticker-name').forEach((el) => {
+          el.style.display = 'none';
+        });
+      },
     });
     const link = document.createElement('a');
     link.download = `抖音特效-样式${id}-P${pageNum}.png`;
