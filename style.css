@@ -765,3 +765,362 @@ input[type="number"] { width: 52px; background: #111; border: 1px solid #444; co
   }
 }
 /* STICKER-LAYER-PANEL-END */
+/* ==========================================================
+   独立文字图层：第一阶段
+   不修改原有 72 种特效和贴纸样式
+   ========================================================== */
+
+#text-layer-panel {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px;
+  margin-bottom: 12px;
+  border: 1px solid #454545;
+  border-radius: 10px;
+  background: #181818;
+  color: #f5f5f5;
+}
+
+.text-layer-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.text-layer-heading strong {
+  font-size: 14px;
+}
+
+#textLayerList {
+  max-height: 210px;
+  overflow-y: auto;
+}
+
+.text-layer-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px;
+  margin-bottom: 4px;
+  border: 1px solid #333;
+  border-radius: 6px;
+  background: #222;
+}
+
+.text-layer-row.active {
+  border-color: var(--primary, #4c8dff);
+  background: #292f3a;
+}
+
+.text-layer-row button {
+  flex: 0 0 auto;
+  min-width: 28px;
+  padding: 4px;
+  border: 1px solid #444;
+  border-radius: 4px;
+  background: #303030;
+  color: #fff;
+  cursor: pointer;
+}
+
+.text-layer-row .text-layer-select {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  border-color: transparent;
+  text-align: left;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.text-layer-empty {
+  padding: 12px 4px;
+  color: #aaa;
+  font-size: 12px;
+}
+
+.text-layer-control {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+  font-size: 12px;
+}
+
+.text-layer-control input[type="range"] {
+  flex: 1;
+  min-width: 80px;
+}
+
+.text-layer-control input[type="color"] {
+  width: 34px;
+  height: 26px;
+  padding: 1px;
+}
+
+.text-layer-control select {
+  padding: 5px;
+  border: 1px solid #555;
+  border-radius: 5px;
+  background: #242424;
+  color: #fff;
+}
+
+.text-layer-hint {
+  margin-top: 10px;
+  color: #aaa;
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+/* 图层容器不拦截未落在文字上的画布操作 */
+.text-layer-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 12;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* 独立文字图层 */
+.text-layer-item {
+  position: absolute;
+  box-sizing: border-box;
+  min-width: 40px;
+  padding: 4px;
+  outline: 1px dashed transparent;
+  outline-offset: 1px;
+  transform-origin: center center;
+  cursor: move;
+  user-select: none;
+  touch-action: none;
+  pointer-events: auto;
+  overflow: visible;
+}
+
+.text-layer-item.selected {
+  outline-color: #55a6ff;
+}
+
+.text-layer-item.locked {
+  cursor: default;
+}
+
+.text-layer-content {
+  min-width: 30px;
+  min-height: 18px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.2;
+  cursor: inherit;
+}
+
+.text-layer-content[contenteditable="true"] {
+  cursor: text;
+  outline: 1px solid #55a6ff;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+/* 缩放和旋转控制点 */
+.text-layer-handle {
+  position: absolute;
+  z-index: 5;
+  width: 12px;
+  height: 12px;
+  padding: 0;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: #2684ff;
+  box-shadow: 0 0 0 1px #2684ff;
+  cursor: pointer;
+  touch-action: none;
+}
+
+.text-layer-resize {
+  right: -6px;
+  bottom: -6px;
+  cursor: nwse-resize;
+}
+
+.text-layer-rotate {
+  top: -23px;
+  left: calc(50% - 6px);
+  cursor: grab;
+}
+
+.text-layer-rotate::after {
+  position: absolute;
+  top: 10px;
+  left: 4px;
+  width: 2px;
+  height: 12px;
+  background: #2684ff;
+  content: "";
+}
+
+.text-layer-item:not(.selected) .text-layer-handle {
+  display: none;
+}
+
+/* 纯正文及导出模式不显示选中框、缩放点和旋转点 */
+.canvas-wrap.view-pure .text-layer-item,
+.canvas-wrap.view-pure .text-layer-item.selected {
+  outline-color: transparent !important;
+}
+
+.canvas-wrap.view-pure .text-layer-handle {
+  display: none !important;
+}
+
+/* TEXT-LAYER-CONTEXT-MENU-START */
+.text-layer-context-menu {
+  position: fixed;
+  z-index: 1000000;
+  width: max-content;
+  max-width: min(260px, calc(100vw - 16px));
+  max-height: calc(100vh - 16px);
+  overflow-y: auto;
+  padding: 7px;
+  border: 1px solid #555b66;
+  border-radius: 9px;
+  background: #20242b;
+  color: #f5f7fa;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, .4);
+  font: 13px/1.4 system-ui, sans-serif;
+}
+.text-layer-context-menu button {
+  display: block;
+  width: 100%;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.text-layer-context-menu button:hover {
+  background: #343b47;
+}
+.text-layer-context-menu .text-layer-menu-row {
+  display: flex;
+  gap: 3px;
+}
+.text-layer-context-menu .text-layer-menu-row button {
+  flex: 1;
+  min-width: 0;
+  padding: 7px 5px;
+  text-align: center;
+}
+.text-layer-context-menu .text-layer-menu-label {
+  padding: 7px 9px 3px;
+  color: #aeb8c7;
+  font-size: 11px;
+}
+.text-layer-context-menu .text-layer-menu-color {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 7px 9px;
+}
+.text-layer-context-menu input[type="color"] {
+  width: 35px;
+  height: 25px;
+  padding: 1px;
+  border: 1px solid #666;
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+}
+.text-layer-context-menu .text-layer-menu-danger {
+  color: #ff7777;
+}
+/* TEXT-LAYER-CONTEXT-MENU-END */
+
+/* 可折叠文字属性区 */
+.text-layer-controls-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 10px;
+  padding: 9px 10px;
+  border: 1px solid #454545;
+  border-radius: 6px;
+  background: #242424;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.text-layer-controls-toggle:hover {
+  border-color: var(--primary, #4c8dff);
+}
+
+#textLayerControls[hidden] {
+  display: none !important;
+}
+
+/* TEXT-STICKER-PANEL-COLLAPSE-V1 */
+/* 独立文字图层：整体折叠时仅保留紧凑标题栏 */
+#text-layer-panel {
+  padding: 8px;
+}
+
+.text-layer-heading {
+  margin-bottom: 0;
+  min-height: 32px;
+}
+
+.text-layer-heading-actions {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex: 0 0 auto;
+}
+
+.text-layer-heading-actions button {
+  white-space: nowrap;
+  padding: 5px 7px;
+}
+
+#text-layer-panel:not(.collapsed) .text-layer-heading {
+  margin-bottom: 8px;
+}
+
+#textLayerPanelBody[hidden] {
+  display: none !important;
+}
+
+/* 文字属性区的二级折叠仍然有效 */
+#textLayerControls[hidden] {
+  display: none !important;
+}
+
+/* 贴纸面板折叠后只显示标题栏 */
+#sticker-panel.collapsed {
+  height: auto;
+  max-height: none;
+  overflow: visible;
+}
+
+#sticker-panel.collapsed .sticker-panel-head {
+  border-bottom: 0;
+  border-radius: 10px;
+}
+
+/* 保持折叠按钮状态清晰 */
+#toggleTextLayerPanel,
+#sticker-panel-toggle {
+  min-width: 48px;
+}
+/* TEXT-STICKER-PANEL-COLLAPSE-V1-END */

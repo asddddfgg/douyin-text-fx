@@ -689,6 +689,18 @@ async function exportSinglePage(id, pageNum) {
         clonedDocument.querySelectorAll('.sticker-handle, .sticker-name').forEach((el) => {
           el.style.display = 'none';
         });
+
+        // 导出时隐藏文字图层的编辑控制元素，保留文字本身。
+        clonedDocument.querySelectorAll('.text-layer-item').forEach((el) => {
+          el.classList.remove('selected');
+          el.style.outline = 'none';
+        });
+        clonedDocument.querySelectorAll('.text-layer-handle').forEach((el) => {
+          el.style.display = 'none';
+        });
+        clonedDocument.querySelectorAll('.text-layer-content[contenteditable="true"]').forEach((el) => {
+          el.style.outline = 'none';
+        });
       },
     });
     const link = document.createElement('a');
