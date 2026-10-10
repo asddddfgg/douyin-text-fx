@@ -22,5 +22,6 @@ const state = {
   },
   savedBgs: [],
   enabledEffects: new Set(EFFECTS.map(e => e.id)),
+  stickers: [],
   presets: JSON.parse(localStorage.getItem('douyin_presets') || '[]')
 };
